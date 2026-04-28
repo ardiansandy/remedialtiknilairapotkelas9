@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Remedial TIK</title>
+    <style>
+        :root { --primary: #4a90e2; --secondary: #f3f4f6; --accent: #2ecc71; --text: #2c3e50; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f7; color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 850px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        header { text-align: center; border-bottom: 2px solid var(--secondary); margin-bottom: 30px; padding-bottom: 10px; }
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-group { margin-bottom: 20px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .suggestions { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 100; max-height: 200px; overflow-y: auto; border-radius: 0 0 8px 8px; }
+        .suggestions div { padding: 10px; cursor: pointer; }
+        .suggestions div:hover { background: var(--secondary); }
+        .section-divider { background: #f8f9fa; padding: 10px 15px; border-left: 5px solid var(--primary); margin: 25px 0 15px 0; font-weight: bold; color: var(--primary); text-transform: uppercase; }
+        .question-card { background: white; padding: 15px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 12px; }
+        .btn { background: var(--primary); color: white; padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; margin-top: 20px; }
+        .btn:disabled { background: #ccc; }
+        .result-box { text-align: center; padding: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Sistem Remedial TIK</h1>
+        <p>Silahkan isi data diri dan kerjakan soal menjodohkan.</p>
+    </header>
+
+    <div id="step1" class="step active">
+        <div class="form-group">
+            <label>Cari Nama Anda:</label>
+            <input type="text" id="nameInput" placeholder="Ketik nama..." autocomplete="off">
+            <div id="nameSuggestions" class="suggestions"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Kelas:</label>
+                <select id="classSelect">
+                    <option value="9A">9A</option>
+                    <option value="9B">9B</option>
+                    <option value="9C">9C</option>
+                    <option value="9D">9D</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Pilih Semester:</label>
+                <select id="semesterSelect">
+                    <option value="1">Semester 1</option>
+                    <option value="2">Semester 2</option>
+                    <option value="3">Semester 3</option>
+                    <option value="4">Semester 4</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Nilai Rapot Sebelumnya:</label>
+            <input type="number" id="prevGrade" placeholder="Contoh: 65">
+        </div>
+
+        <button class="btn" onclick="startQuiz()">Lanjut ke Soal</button>
+    </div>
+
+    <div id="step2" class="step">
+        <div id="quizContainer"></div>
+        <button class="btn" id="submitBtn" onclick="finishQuiz()">Kirim Jawaban Ke Guru</button>
+    </div>
+
+    <div id="step3" class="step">
+        <div class="result-box">
+            <h2 id="statusTitle">Mengirim Data...</h2>
+            <div id="scoreBox" style="display:none">
+                <p id="summaryText"></p>
+                <div style="font-size: 60px; font-weight: 800; color: var(--primary);" id="scoreDisplay">0</div>
+                <p>Data otomatis tersimpan di Google Sheet Guru.</p>
+                <button class="btn" onclick="location.reload()">Selesai</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// KONFIGURASI GOOGLE SHEET (Ganti URL ini nanti)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNbfOVEQ4CKSfV_XqX7g6CZ_XEQ5n6soAPjjFr2g5JBuma4Ak49s59NF7CYGoHl-GiTw/exec";
+
+const studentNames = ["Aisya Firyaal Firzanah", "Amaliya", "Aulia Lailah Nurramadhani", "Balqis Alifiya Hakim", "Fitri Amaliah Wardana", "Gadiza Nuraulia", "Ghaitsaa Dzaakirah Budiman", "Ghania Fitri Farhani", "Hasuna Ismuhu Ali Nurrachman", "Indira Rafania Zainiza", "Kalila Ghayda Ayu Faizia", "Keisya Aulia Sutendi", "Megumi Hijri Maulana", "Nafeeza Ramadhina Kireyna Hikari", "Nayla Adawiyah Mulyana", "Rashiqa Azra Nafisa", "Rayna Nalanineva Wahyudianto", "Salva Adela Putri", "Selma Putri Kirani", "Shifa Nazila Putri", "Siti Amara Syahmina", "Siti Zahra Sefiani", "Sofia Bhanuwaty Andasti", "Talitha Zahirah Nasution", "Tania Evelyn Lianra Cytava", "Anisa Ananta Saputri", "Anisa Permata Sari", "Antriani Ardila Putri", "Ashani Putri Kurniadi", "Byan Edgina Feizal", "Clarissa Syifa Alfathunnisa", "Daviena Roschalia", "Davisha Zalsa Arfadhia", "Febi Karimatul Khoiriyah", "Fizya Ainun Putri", "Kayla Putri Rania", "Miladia Rahmi Koani", "Mutia Nurmaulida", "Naznin Laiqa Assyifa", "Nazwa Alliya Zahiran", "Putri Cahayani", "Qathrunnada Sandiodiva Vinesa", "Seindah Mutia Ramadhani", "Sifa Aulia Septina", "Siti Haniifah Azzahra", "Wafa Faiza Arifin", "Yasmin Khoirun Nisa Anwar", "Zahira Putri Syabilla Hermawan", "Zahra Nur Hafizhah", "Aldric Zhafran Fariandi", "Alzyavara Naisyam Irawadi", "Aqila Putra Alfatih", "Argia Ferdiansyah Putra", "Atria Oktraniza", "Bakhtiar Muhammad El Fath", "Dezan Khairul Faza", "Dziban Ahsan Nugraha", "Fawwaz Alghifari", "Ghibran Abdu Jabbar Permana", "Landon Julian", "M. Dzian Pra Ramadhan", "M. Faiz Arfa Ramadhan", "M. Faldiza Mahardika", "M. Ghaizan Fajar Addien", "Muhamad Al-Fariezzy Hudori", "Muhamad Riezki Al Fauzie", "Muhammad Dziqra Hirzan", "Muhammad Fauzan Arasyid", "Muhammad Irsyad", "Muhammad Nicky Al Vhaley", "Muhammad Ridwan Arrasyid", "Muhammad Taamiruljalal Al-Kholis", "Nafis Muhammad Naufal", "Oryza Rizki Alfaris", "Pizar Fathir Raihadi", "Rezky Fauzan Hamdani", "Riziq Surya Sefa", "Roby Kandira", "Syahal Arkan Satria Alkhaizan", "Yudha Esa Putra", "Zahrias Azkarumy", "Abdurrahman Habibie", "Adnan Manaf Arrahman", "Alghaniy Zaydan Gunawan", "Arya Putra Senjaya", "Ayyasy Ghaziya Bhaskara", "Azril Julian Irawan", "Dwi Andika Febryansyah", "Fakhri Yudha Soesanto", "Fidli Zian Septiawan", "Ghifari Akhdan Aulia Putra", "Haziq Al Baihaqi", "Leandro Borneo Cheyanne", "M. Alzian Alfareizy", "M. Faeyza Insani", "M. Fathir Taofiq Assidiq", "M. Fauzan Habibullah", "Mahija Putra", "Moch. Dafa Sakhy Ramdani", "Muhamad Dika Setya Pawana", "Muhammad Arsal Alfarik", "Muhammad Ichsanul Karim", "Muhammad Permana Sidiq", "Muhammad Rifqi Idznillah Firmansyah", "Muhammad Vyanka Dzikramdhani", "Rafa Al Hafiza", "Raisha Al Azka Prayudha", "Razan Akhtar Maulana", "Rifki Putra Melindra", "Rio Putra Lesmana", "Zhafir Artar Alhilman"];
+
+const allQuizData = {
+    "1": [
+        { q: "Raka menyimpan tugas di komputer sekolah tanpa login akun pribadi. Risiko utama adalah …", a: "Data bisa diakses orang lain" },
+        { q: "Dina menggunakan password '123456'. Analisis kelemahannya adalah …", a: "Mudah ditebak" },
+        { q: "Andi mengirim file lewat flashdisk yang sering dipakai banyak orang. Risiko adalah …", a: "Tertular virus" },
+        { q: "Sinta membuka situs tidak dikenal saat mencari materi. Ancaman adalah …", a: "Malware" },
+        { q: "Budi mengunduh aplikasi dari sumber tidak resmi. Dampaknya adalah …", a: "Virus / malware" },
+        { q: "Lani lupa logout dari akun email di komputer umum. Risiko adalah …", a: "Akun disalahgunakan" },
+        { q: "Fajar menggunakan WiFi publik untuk login akun bank. Analisisnya adalah …", a: "Tidak aman" },
+        { q: "Nisa menyebarkan foto temannya tanpa izin. Melanggar prinsip …", a: "Privasi" },
+        { q: "Dodi menyalin tugas dari internet tanpa sumber. Disebut …", a: "Plagiarisme" },
+        { q: "Rani menerima pesan link mencurigakan. Tindakan terbaik adalah …", a: "Tidak membuka link" },
+        { q: "Aldi menyimpan file hanya di satu perangkat. Risiko adalah …", a: "Data hilang" },
+        { q: "Tika menggunakan antivirus yang tidak pernah diperbarui. Dampaknya adalah …", a: "Tidak terlindungi" },
+        { q: "Bayu membuka email dari pengirim tidak dikenal. Ancaman adalah …", a: "Phishing" },
+        { q: "Sari meninggalkan komputer tanpa mengunci layar. Risiko adalah …", a: "Data dicuri" },
+        { q: "Riko mengunggah data pribadi ke media sosial. Dampaknya adalah …", a: "Kebocoran data" },
+        { q: "Nina menggunakan password yang sama untuk semua akun. Risiko adalah …", a: "Semua akun bisa diretas" },
+        { q: "Danu membagikan informasi tanpa periksa ulang. Dampaknya adalah …", a: "Menyebarkan hoaks" },
+        { q: "Vina menerima file Bluetooth dari pengirim misterius. Risiko adalah …", a: "Virus" },
+        { q: "Yudi menggunakan software bajakan. Dampaknya adalah …", a: "Malware / ilegal" },
+        { q: "Rina menyimpan data tanpa cadangan (backup). Risiko adalah …", a: "Kehilangan data" },
+        { q: "Toni login di HP teman dan tidak logout. Risiko adalah …", a: "Akun dicuri" },
+        { q: "Mega tidak pernah memperbarui Sistem Operasi. Akibatnya …", a: "Rentan serangan" },
+        { q: "Ardi menggunakan USB yang terinfeksi virus. Dampaknya …", a: "Menyebarkan virus" },
+        { q: "Wulan share lokasi real-time di medsos. Risiko adalah …", a: "Keamanan terganggu" },
+        { q: "Edo membuka banyak tab situs tidak terpercaya. Dampaknya …", a: "Terkena malware" },
+        { q: "Siska mengabaikan notifikasi update keamanan. Risiko adalah …", a: "Serangan tidak terdeteksi" },
+        { q: "Rendi pakai WiFi tanpa password di tempat sepi. Risiko …", a: "Mudah diretas" },
+        { q: "Lala catat password di kertas dan ditempel di meja. Risiko …", a: "Password bocor" },
+        { q: "Iqbal instal banyak aplikasi 'mod' tidak jelas. Dampaknya …", a: "Terinfeksi malware" },
+        { q: "Putri pakai email sekolah untuk daftar game. Risiko …", a: "Data tercampur" },
+        { q: "Hasan tidak logout medsos di warnet. Risiko …", a: "Akun diambil alih" },
+        { q: "Dewi pakai tanggal lahir sebagai PIN bank. Risiko …", a: "Mudah ditebak" },
+        { q: "Ilham memberikan kode OTP ke penelpon misterius. Risiko …", a: "Akun dibobol" },
+        { q: "Nanda klik iklan hadiah gratis di browser. Dampaknya …", a: "Malware" },
+        { q: "Salsa pakai kabel charger umum di stasiun. Risiko …", a: "Data dicuri" },
+        { q: "Farhan hapus folder tugas tanpa backup. Akibatnya …", a: "Data hilang permanen" },
+        { q: "Rika buka lampiran .exe dari email tak dikenal. Risiko …", a: "Virus / malware" },
+        { q: "Joko pakai username orang lain diam-diam. Disebut …", a: "Pelanggaran etika" },
+        { q: "Mila tidak pasang pola/sandi di HP-nya. Risiko …", a: "Data diakses orang lain" },
+        { q: "Dani anggap remeh update aplikasi antivirus. Akibatnya …", a: "Sistem rentan" }
+    ],
+    "2": [ // MATERI: INTERNET & WEB
+        { q: "Perangkat lunak untuk mengakses halaman web disebut ...", a: "Web Browser" },
+        { q: "Alamat unik sebuah halaman di internet disebut ...", a: "URL" },
+        { q: "Kumpulan halaman web yang saling terhubung dalam satu domain disebut ...", a: "Website" },
+        { q: "Protokol aman untuk transfer data di web ditandai dengan ...", a: "HTTPS" },
+        { q: "Bahasa standar untuk membuat struktur halaman web adalah ...", a: "HTML" },
+        { q: "Mesin pencari yang paling populer saat ini adalah ...", a: "Google" },
+        { q: "Proses mengunduh file dari internet ke komputer disebut ...", a: "Download" },
+        { q: "Proses mengirim file dari komputer ke internet disebut ...", a: "Upload" },
+        { q: "Layanan surat elektronik di internet disebut ...", a: "Email" },
+        { q: "Simbol wajib dalam penulisan alamat email adalah ...", a: "@ (at)" },
+        { q: "Google Chrome, Mozilla Firefox, dan Safari adalah contoh ...", a: "Browser" },
+        { q: "Halaman pertama sebuah website disebut ...", a: "Homepage" },
+        { q: "Istilah untuk menjelajahi internet secara acak disebut ...", a: "Surfing" },
+        { q: "Jaringan komputer global yang menghubungkan seluruh dunia disebut ...", a: "Internet" },
+        { q: "Alamat numerik unik setiap perangkat di internet disebut ...", a: "IP Address" },
+        { q: "Kabel bawah laut yang menghubungkan internet antar benua adalah ...", a: "Fiber Optic" },
+        { q: "Penyedia layanan internet (Contoh: Indihome, Biznet) disebut ...", a: "ISP" },
+        { q: "Teknologi nirkabel untuk akses internet jarak dekat disebut ...", a: "WiFi" },
+        { q: "Menghubungkan internet dari HP ke Laptop disebut ...", a: "Tethering" },
+        { q: "Kotak tempat mencari informasi di browser disebut ...", a: "Search Bar" },
+        { q: "Menyimpan alamat web favorit agar mudah dibuka kembali disebut ...", a: "Bookmark" },
+        { q: "Pesan sampah/iklan yang masuk otomatis ke email disebut ...", a: "Spam" },
+        { q: "Folder untuk menyimpan draf email yang belum dikirim adalah ...", a: "Draft" },
+        { q: "Tombol untuk memperbarui tampilan halaman web disebut ...", a: "Refresh / Reload" },
+        { q: "Teks yang jika diklik akan berpindah ke halaman lain disebut ...", a: "Hyperlink" },
+        { q: "Singkatan dari World Wide Web adalah ...", a: "WWW" },
+        { q: "Domain yang khusus digunakan untuk lembaga pendidikan adalah ...", a: ".edu / .sch.id" },
+        { q: "Domain resmi milik pemerintah Indonesia adalah ...", a: ".go.id" },
+        { q: "Modul yang digunakan untuk mengubah sinyal digital ke analog adalah ...", a: "Modem" },
+        { q: "Kecepatan akses internet biasanya diukur dalam satuan ...", a: "Mbps" },
+        { q: "Ikon 'gembok' di alamat browser menandakan situs tersebut ...", a: "Terenkripsi / Aman" },
+        { q: "Situs yang memungkinkan pengguna berbagi video adalah ...", a: "YouTube" },
+        { q: "Layanan penyimpanan data di internet milik Google disebut ...", a: "Google Drive" },
+        { q: "Layanan peta digital milik Google disebut ...", a: "Google Maps" },
+        { q: "Layanan untuk melakukan panggilan video jarak jauh disebut ...", a: "Zoom / Meet" },
+        { q: "Istilah untuk orang yang ahli membobol sistem keamanan internet adalah ...", a: "Hacker" },
+        { q: "Membuka banyak tab di browser secara bersamaan disebut ...", a: "Multi-tabbing" },
+        { q: "Kumpulan aturan komunikasi data di internet disebut ...", a: "Protokol" },
+        { q: "Nama akhir alamat web seperti .com, .net, .org disebut ...", a: "Ekstensi Domain" },
+        { q: "Cara keluar dari akun website agar tetap aman adalah dengan ...", a: "Logout / Sign out" }
+    ],
+    "3": [ // MATERI: LITERASI DIGITAL & OFFICE
+        { q: "Aplikasi Microsoft yang digunakan untuk mengolah kata adalah ...", a: "MS Word" },
+        { q: "Aplikasi Microsoft yang digunakan untuk mengolah angka/tabel adalah ...", a: "MS Excel" },
+        { q: "Aplikasi Microsoft yang digunakan untuk presentasi adalah ...", a: "MS PowerPoint" },
+        { q: "Fungsi di Excel untuk menjumlahkan data otomatis adalah ...", a: "SUM" },
+        { q: "Fungsi di Excel untuk menghitung nilai rata-rata adalah ...", a: "AVERAGE" },
+        { q: "Fungsi di Excel untuk mencari nilai tertinggi adalah ...", a: "MAX" },
+        { q: "Fungsi di Excel untuk mencari nilai terendah adalah ...", a: "MIN" },
+        { q: "Perintah pintas (Shortcut) untuk menyalin teks adalah ...", a: "Ctrl + C" },
+        { q: "Perintah pintas (Shortcut) untuk menempel teks adalah ...", a: "Ctrl + V" },
+        { q: "Perintah pintas (Shortcut) untuk membatalkan perintah (undo) adalah ...", a: "Ctrl + Z" },
+        { q: "Orientasi kertas yang memanjang ke bawah (tegak) disebut ...", a: "Portrait" },
+        { q: "Orientasi kertas yang memanjang ke samping (lebar) disebut ...", a: "Landscape" },
+        { q: "Tanda yang mengawali penulisan rumus di MS Excel adalah ...", a: "= (Sama dengan)" },
+        { q: "Pertemuan antara baris dan kolom di Excel disebut ...", a: "Cell" },
+        { q: "Kumpulan dari beberapa Cell di Excel disebut ...", a: "Range" },
+        { q: "Menggabungkan dua atau lebih cell di Excel menggunakan fitur ...", a: "Merge & Center" },
+        { q: "Jenis font standar yang sering digunakan dalam dokumen resmi adalah ...", a: "Times New Roman" },
+        { q: "Mengatur teks agar rata kanan dan kiri (rapi) disebut ...", a: "Justify" },
+        { q: "Memberi efek tebal pada tulisan disebut ...", a: "Bold" },
+        { q: "Memberi efek miring pada tulisan disebut ...", a: "Italic" },
+        { q: "Memberi garis bawah pada tulisan disebut ...", a: "Underline" },
+        { q: "Ekstensi file untuk dokumen MS Word adalah ...", a: ".docx" },
+        { q: "Ekstensi file untuk dokumen MS Excel adalah ...", a: ".xlsx" },
+        { q: "Ekstensi file untuk dokumen MS PowerPoint adalah ...", a: ".pptx" },
+        { q: "Satu halaman dalam file PowerPoint disebut ...", a: "Slide" },
+        { q: "Mengatur jarak antar baris tulisan disebut ...", a: "Line Spacing" },
+        { q: "Fitur untuk membuat surat massal secara otomatis di Word adalah ...", a: "Mail Merge" },
+        { q: "Ukuran kertas standar untuk tugas sekolah adalah ...", a: "A4" },
+        { q: "Menghapus karakter di depan kursor menggunakan tombol ...", a: "Delete" },
+        { q: "Menghapus karakter di belakang kursor menggunakan tombol ...", a: "Backspace" },
+        { q: "Memindahkan file dari satu folder ke folder lain disebut ...", a: "Move / Cut" },
+        { q: "Istilah untuk jejak yang kita tinggalkan saat berinternet adalah ...", a: "Digital Footprint" },
+        { q: "Etika berkomunikasi di dunia maya disebut ...", a: "Netiquette" },
+        { q: "Menggunakan karya orang lain tanpa izin/sumber disebut ...", a: "Plagiat" },
+        { q: "Berita bohong yang disebarkan di media sosial disebut ...", a: "Hoax" },
+        { q: "Tindakan merundung/mengejek orang lain di internet disebut ...", a: "Cyberbullying" },
+        { q: "Keamanan ganda saat login menggunakan kode HP disebut ...", a: "2FA" },
+        { q: "Hak eksklusif pencipta atas karyanya disebut ...", a: "Hak Cipta" },
+        { q: "Lisensi karya bebas yang mengizinkan orang berbagi adalah ...", a: "Creative Commons" },
+        { q: "Upaya untuk melindungi data pribadi di internet disebut ...", a: "Privasi Data" }
+    ],
+    "4": [ // MATERI: BERPIKIR KOMPUTASIONAL & HARDWARE
+        { q: "Otak dari sebuah komputer disebut ...", a: "CPU" },
+        { q: "Perangkat keras untuk mengetik huruf dan angka adalah ...", a: "Keyboard" },
+        { q: "Perangkat keras untuk menggerakkan kursor adalah ...", a: "Mouse" },
+        { q: "Perangkat keras untuk menampilkan gambar/visual adalah ...", a: "Monitor" },
+        { q: "Perangkat keras untuk mencetak dokumen ke kertas adalah ...", a: "Printer" },
+        { q: "Penyimpanan data permanen di dalam komputer adalah ...", a: "Harddisk / SSD" },
+        { q: "Penyimpanan data sementara saat komputer menyala disebut ...", a: "RAM" },
+        { q: "Perangkat keras luar untuk menyimpan data portabel adalah ...", a: "Flashdisk" },
+        { q: "Alat untuk memindai dokumen fisik menjadi file digital adalah ...", a: "Scanner" },
+        { q: "Perangkat keras untuk mengeluarkan suara adalah ...", a: "Speaker" },
+        { q: "Langkah-langkah logis untuk menyelesaikan masalah disebut ...", a: "Algoritma" },
+        { q: "Diagram yang menggambarkan alur sebuah proses disebut ...", a: "Flowchart" },
+        { q: "Simbol 'Lonjong' dalam flowchart digunakan untuk ...", a: "Start / End" },
+        { q: "Simbol 'Kotak' dalam flowchart digunakan untuk ...", a: "Proses" },
+        { q: "Simbol 'Belah Ketupat' dalam flowchart digunakan untuk ...", a: "Keputusan (Ya/Tidak)" },
+        { q: "Memecah masalah besar menjadi bagian yang lebih kecil disebut ...", a: "Dekomposisi" },
+        { q: "Mencari kesamaan pola dalam suatu masalah disebut ...", a: "Pengenalan Pola" },
+        { q: "Fokus pada informasi penting dan mengabaikan yang tidak penting disebut ...", a: "Abstraksi" },
+        { q: "Bahasa yang hanya dimengerti komputer (0 dan 1) disebut ...", a: "Biner" },
+        { q: "Perangkat lunak utama yang mengelola hardware (Contoh: Windows) disebut ...", a: "Sistem Operasi" },
+        { q: "Komponen fisik komputer yang bisa disentuh disebut ...", a: "Hardware" },
+        { q: "Program atau aplikasi di dalam komputer disebut ...", a: "Software" },
+        { q: "Alat input untuk memasukkan suara ke komputer adalah ...", a: "Microphone" },
+        { q: "Alat output untuk menampilkan presentasi ke dinding adalah ...", a: "Proyektor" },
+        { q: "Papan sirkuit utama tempat semua komponen terpasang disebut ...", a: "Motherboard" },
+        { q: "Kipas di atas CPU yang berfungsi mendinginkan suhu disebut ...", a: "Heatsink" },
+        { q: "Bagian komputer yang menyuplai listrik ke semua komponen adalah ...", a: "Power Supply" },
+        { q: "Tombol pada keyboard untuk membuat huruf kapital semua adalah ...", a: "Caps Lock" },
+        { q: "Tombol pada keyboard untuk berpindah baris baru adalah ...", a: "Enter" },
+        { q: "Tombol pada keyboard untuk membatalkan perintah/keluar adalah ...", a: "Esc" },
+        { q: "Kamera kecil pada laptop untuk video call disebut ...", a: "Webcam" },
+        { q: "Satuan terkecil data dalam komputer disebut ...", a: "Bit" },
+        { q: "Kumpulan dari 8 bit data disebut ...", a: "Byte" },
+        { q: "Singkatan dari Random Access Memory adalah ...", a: "RAM" },
+        { q: "Istilah untuk menghidupkan kembali komputer (mulai dari awal) adalah ...", a: "Restart" },
+        { q: "Program kecil yang merusak sistem komputer disebut ...", a: "Virus" },
+        { q: "Mengatur file ke dalam folder-folder agar rapi disebut ...", a: "Manajemen File" },
+        { q: "Mengompres file besar menjadi lebih kecil biasanya berekstensi ...", a: ".zip / .rar" },
+        { q: "Alat untuk menstabilkan tegangan listrik komputer adalah ...", a: "Stabilizer" },
+        { q: "Baterai cadangan yang menjaga komputer tetap nyala saat mati lampu adalah ...", a: "UPS" }
+    ]
+};
+
+// Autocomplete Logic
+const nameInput = document.getElementById('nameInput');
+const suggestionsBox = document.getElementById('nameSuggestions');
+nameInput.addEventListener('input', () => {
+    const val = nameInput.value.toLowerCase();
+    suggestionsBox.innerHTML = '';
+    if (val.length < 2) return;
+    studentNames.filter(n => n.toLowerCase().includes(val)).forEach(name => {
+        const div = document.createElement('div');
+        div.innerText = name;
+        div.onclick = () => { nameInput.value = name; suggestionsBox.innerHTML = ''; };
+        suggestionsBox.appendChild(div);
+    });
+});
+
+function startQuiz() {
+    if (!nameInput.value || !document.getElementById('prevGrade').value) {
+        alert("Lengkapi data!"); return;
+    }
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    renderQuiz();
+    window.scrollTo(0,0);
+}
+
+function renderQuiz() {
+    const sem = document.getElementById('semesterSelect').value;
+    const data = allQuizData[sem];
+    const container = document.getElementById('quizContainer');
+    container.innerHTML = '';
+
+    for (let i = 0; i < 4; i++) {
+        const start = i * 10; const end = start + 10;
+        const div = document.createElement('div');
+        div.className = 'section-divider';
+        div.innerText = `BAGIAN ${i+1} (SOAL ${start+1}-${end})`;
+        container.appendChild(div);
+
+        const groupAns = [...new Set(data.slice(start, end).map(d => d.a))].sort();
+
+        for (let j = start; j < end; j++) {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            let opts = `<option value="">-- Pilih Jawaban --</option>`;
+            groupAns.forEach(a => opts += `<option value="${a}">${a}</option>`);
+            card.innerHTML = `<p>${j+1}. ${data[j].q}</p><select class="ans" data-idx="${j}">${opts}</select>`;
+            container.appendChild(card);
+        }
+    }
+}
+
+function finishQuiz() {
+    const sem = document.getElementById('semesterSelect').value;
+    const data = allQuizData[sem];
+    const selects = document.querySelectorAll('.ans');
+    let correct = 0;
+    selects.forEach(s => { if(s.value === data[s.getAttribute('data-idx')].a) correct++; });
+    
+    const finalScore = Math.round((correct / 40) * 100);
+    
+    // Kirim Data
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step3').classList.add('active');
+    
+    const payload = {
+        nama: nameInput.value,
+        kelas: document.getElementById('classSelect').value,
+        semester: sem,
+        rapot: document.getElementById('prevGrade').value,
+        hasil: finalScore
+    };
+
+    fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        document.getElementById('statusTitle').innerText = "Berhasil Dikirim!";
+        document.getElementById('scoreBox').style.display = "block";
+        document.getElementById('summaryText').innerText = `Halo ${payload.nama}, nilai perbaikan kamu:`;
+        document.getElementById('scoreDisplay').innerText = finalScore;
+    }).catch(err => alert("Gagal mengirim ke Google Sheet. Periksa koneksi!"));
+}
+</script>
+</body>
+</html>
