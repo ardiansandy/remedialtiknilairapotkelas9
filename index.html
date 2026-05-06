@@ -337,35 +337,28 @@ function finishQuiz() {
     document.getElementById('step2').classList.remove('active');
     document.getElementById('step3').classList.add('active');
     
-    const payload = {
-        nama: document.getElementById('nameInput').value,
-        kelas: document.getElementById('classSelect').value,
-        semester: sem,
-        rapot: document.getElementById('prevGrade').value,
-        hasil: finalScore
-    };
+const payload = {
+    nama: nameInput.value,
+    kelas: document.getElementById('classSelect').value,
+    semester: sem,
+    rapot: document.getElementById('prevGrade').value,
+    hasil: finalScore
+};
 
-    // Gunakan URLSearchParams agar kompatibel dengan doPost Apps Script
-    const formData = new URLSearchParams();
-    for (const key in payload) {
-        formData.append(key, payload[key]);
-    }
-
-    fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors", // Tetap gunakan no-cors untuk Apps Script, tapi datanya sekarang dalam format URL encoded
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData.toString()
-    }).then(() => {
-        // Tampilan sukses
-        document.getElementById('statusTitle').innerText = "Berhasil Dikirim!";
-        document.getElementById('scoreBox').style.display = "block";
-        document.getElementById('summaryText').innerText = `Halo ${payload.nama}, nilai perbaikan kamu:`;
-        document.getElementById('scoreDisplay').innerText = finalScore;
-    }).catch(err => {
-        console.error(err);
-        alert("Terjadi kesalahan sistem saat mengirim data.");
-    });
+fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors", // Gunakan no-cors agar tidak terblokir browser
+    body: JSON.stringify(payload) // Kirim data sebagai string JSON
+}).then(() => {
+    // Tampilan di web
+    document.getElementById('statusTitle').innerText = "Berhasil Dikirim!";
+    document.getElementById('scoreBox').style.display = "block";
+    document.getElementById('summaryText').innerText = `Halo ${payload.nama}, nilai perbaikan kamu:`;
+    document.getElementById('scoreDisplay').innerText = finalScore;
+}).catch(err => {
+    console.error("Fetch Error:", err);
+    alert("Gagal mengirim data. Cek koneksi internet.");
+});
 }
 </script>
 </body>
