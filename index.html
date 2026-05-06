@@ -323,17 +323,29 @@ function renderQuiz() {
 }
 
 function finishQuiz() {
-    // ... (kode perhitungan skor tetap sama) ...
-
+    const sem = document.getElementById('semesterSelect').value;
+    const data = allQuizData[sem];
+    const selects = document.querySelectorAll('.ans');
+    let correct = 0;
+    
+    selects.forEach(s => { 
+        if(s.value === data[s.getAttribute('data-idx')].a) correct++; 
+    });
+    
+    const finalScore = Math.round((correct / 40) * 100);
+    
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step3').classList.add('active');
+    
     const payload = {
-        nama: nameInput.value,
+        nama: document.getElementById('nameInput').value,
         kelas: document.getElementById('classSelect').value,
         semester: sem,
         rapot: document.getElementById('prevGrade').value,
         hasil: finalScore
     };
 
-    // Gunakan URLSearchParams untuk menghindari masalah CORS JSON
+    // Gunakan URLSearchParams agar kompatibel dengan doPost Apps Script
     const formData = new URLSearchParams();
     for (const key in payload) {
         formData.append(key, payload[key]);
@@ -341,21 +353,18 @@ function finishQuiz() {
 
     fetch(SCRIPT_URL, {
         method: "POST",
-        body: formData, // Mengirim sebagai form-data
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-    })
-    .then(response => {
-        // Karena Apps Script akan sukses meskipun tanpa response body yang terbaca
+        mode: "no-cors", // Tetap gunakan no-cors untuk Apps Script, tapi datanya sekarang dalam format URL encoded
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString()
+    }).then(() => {
+        // Tampilan sukses
         document.getElementById('statusTitle').innerText = "Berhasil Dikirim!";
         document.getElementById('scoreBox').style.display = "block";
         document.getElementById('summaryText').innerText = `Halo ${payload.nama}, nilai perbaikan kamu:`;
         document.getElementById('scoreDisplay').innerText = finalScore;
-    })
-    .catch(err => {
+    }).catch(err => {
         console.error(err);
-        alert("Gagal mengirim ke Google Sheet. Periksa koneksi!");
+        alert("Terjadi kesalahan sistem saat mengirim data.");
     });
 }
 </script>
